@@ -41,7 +41,7 @@ conn.execute("""
 """
 )
 
-#Create posts table
+# Create posts table
 conn.execute("""
     CREATE TABLE IF NOT EXISTS posts(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,24 +53,26 @@ conn.execute("""
     )
 """)
 
-#Create likes table
+# Create likes table
 conn.execute("""
     CREATE TABLE IF NOT EXISTS likes(
         user_id REFERENCES users(id) ON DELETE CASCADE,
-        post_id REFERENCES posts(id) ON DELETE CASCADE
+        post_id REFERENCES posts(id) ON DELETE CASCADE,
+        PRIMARY KEY (user_id, post_id)
     )
 """)
 
-#Create comments table
+# Create comments table
 conn.execute("""
     CREATE TABLE IF NOT EXISTS comments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id REFERENCES users(id) ON DELETE CASCADE,
         post_id REFERENCES posts(id) ON DELETE CASCADE,
         content TEXT NOT NULL
     )
 """)
 
-#Create tags table
+# Create tags table
 conn.execute("""
     CREATE TABLE IF NOT EXISTS tags(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,12 +80,14 @@ conn.execute("""
     )
 """)
 
-#Create posts_tags table (many-to-many)
+# Create posts_tags table (many-to-many)
 conn.execute("""
     CREATE TABLE IF NOT EXISTS posts_tags(
         post_id REFERENCES posts(id) ON DELETE CASCADE,
         tags_id REFERENCES tags(id) ON DELETE CASCADE
     )
 """)
+
+# Create 
 
 
