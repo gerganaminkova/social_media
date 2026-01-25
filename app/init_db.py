@@ -19,7 +19,9 @@ conn.execute("""
 conn.execute("""
     CREATE TABLE IF NOT EXISTS friends(
         user_id REFERENCES users(id) ON DELETE CASCADE,
-        friend_id REFERENCES users(id) ON DELETE CASCADE
+        friend_id REFERENCES users(id) ON DELETE CASCADE,
+        status TEXT DEFAULT 'PENDING',
+        PRIMARY KEY (user_id, friend_id)
     )
 """)
 
@@ -88,6 +90,15 @@ conn.execute("""
     )
 """)
 
-# Create 
+# Create messages table
+conn.execute("""
+    CREATE TABLE IF NOT EXISTS messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+""")
 
 
