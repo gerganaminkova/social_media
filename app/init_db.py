@@ -101,4 +101,24 @@ conn.execute("""
     )
 """)
 
+# Create stories table 
+conn.execute("""
+    CREATE TABLE IF NOT EXISTS stories(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uploader_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        visibility TEXT NOT NULL CHECK(visibility IN ('public', 'friends' , 'group')),
+        group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE
+    )
+""")
 
+# Create stories_reaction table 
+conn.execute("""
+    CREATE TABLE IF NOT EXISTS stories_reaction(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        emoji TEXT CHECK(emoji IN ('😲', '❤️', '🔥', '😂', '👏'))
+    )
+""")
