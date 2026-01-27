@@ -11,6 +11,7 @@ app.include_router(posts.router)
 app.include_router(chat.router)
 app.include_router(stories.router)
 
+
 @app.get("/")
 def root():
     return {"message": "Hello, World!"}

@@ -1,5 +1,6 @@
 import sqlite3
 
+
 def get_db_connection():
     conn = sqlite3.connect("social_media.db")
     conn.execute("PRAGMA foreign_keys = ON")

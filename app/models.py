@@ -17,6 +17,15 @@ class Visibility(Enum):
     FRIENDS = "friends"
     GROUP = "group"
 
+
 class FriendRequestAction(Enum):
     ACCEPT = "accept"
     DECLINE = "decline"
+
+
+class ReactionType(str, Enum):
+    WOW = "😲"
+    LOVE = "❤️"
+    FIRE = "🔥"
+    LAUGH = "😂"
+    CLAP = "👏"
