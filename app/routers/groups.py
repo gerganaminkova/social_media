@@ -1,35 +1,17 @@
 import sqlite3
 from fastapi import APIRouter, HTTPException, Depends
 from database import get_db_connection
-from models import Role
+from utils import get_current_user
 
 router = APIRouter()
 
 
 @router.post("/create-group")
-def create_group(name: str, owner_id: int, member_ids: list[int]):
+def create_group(name: str, owner_id: int, member_ids: list[int],current_user: dict = Depends(get_current_user)):
+    owner_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute(
-        """
-                   SELECT role FROM users WHERE id = ?
-    """,
-        (owner_id,),
-    )
-    owner_role_row = cursor.fetchone()
-
-    if not owner_role_row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Owner not found")
-
-    owner_role = dict(owner_role_row)["role"]
-
-    if owner_role == "guest":
-        conn.close()
-        raise HTTPException(
-            status_code=422, detail="Guests are not allowed to create groups"
-        )
 
     cursor.execute(
         """
@@ -37,8 +19,8 @@ def create_group(name: str, owner_id: int, member_ids: list[int]):
     """,
         (name, owner_id),
     )
-
     new_group_id = cursor.lastrowid
+
     for member_id in member_ids:
         cursor.execute(
             """
@@ -54,7 +36,9 @@ def create_group(name: str, owner_id: int, member_ids: list[int]):
 
 
 @router.delete("/remove-group-member")
-def remove_group_member(group_id: int, user_id: int, owner_id: int):
+def remove_group_member(group_id: int, user_id: int, current_user: dict = Depends(get_current_user) ):
+    owner_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -97,7 +81,9 @@ def remove_group_member(group_id: int, user_id: int, owner_id: int):
 
 
 @router.delete("/delete-group")
-def delete_group(group_id: int, owner_id: int):
+def delete_group(group_id: int, current_user: dict = Depends(get_current_user) ):
+    owner_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -133,7 +119,9 @@ def delete_group(group_id: int, owner_id: int):
 
 
 @router.post("/add-member")
-def add_member_to_group(group_id: int, admin_id: int, new_member_id: int):
+def add_member_to_group(group_id: int, new_member_id: int, current_user: dict = Depends(get_current_user)):
+    admin_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 

@@ -1,24 +1,17 @@
 import sqlite3
 from fastapi import APIRouter, HTTPException, Depends
 from database import get_db_connection
+from utils import get_current_user
 
 router = APIRouter()
 
 
 @router.post("/send-message")
-def send_message(sender_id: int, receiver_id: int, content: str):
+def send_message(receiver_id: int, content: str ,current_user: dict = Depends(get_current_user)):
+    sender_id = current_user["id"]
+    
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        SELECT id FROM users WHERE id = ?
-    """,
-        (sender_id,),
-    )
-    if not cursor.fetchone():
-        conn.close()
-        raise HTTPException(status_code=404, detail="sender not found")
 
     cursor.execute(
         """
@@ -58,29 +51,12 @@ def send_message(sender_id: int, receiver_id: int, content: str):
 
 
 @router.get("/get-chat")
-def get_chat(user1_id: int, user2_id: int):
+def get_chat(other_user_id: int, current_user: dict = Depends(get_current_user)):
+    user1_id = current_user["id"] 
+    user2_id = other_user_id
+
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        SELECT id FROM users WHERE id = ?
-    """,
-        (user1_id,),
-    )
-    if not cursor.fetchone():
-        conn.close()
-        raise HTTPException(status_code=404, detail="sender not found")
-
-    cursor.execute(
-        """
-       SELECT id FROM users WHERE id = ?
-    """,
-        (user2_id,),
-    )
-    if not cursor.fetchone():
-        conn.close()
-        raise HTTPException(status_code=404, detail="sender not found")
 
     cursor.execute(
         """

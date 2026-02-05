@@ -1,8 +1,8 @@
 from enum import Enum
+from pydantic import BaseModel
 
 
-class Role(Enum):
-    GUEST = "guest"
+class Role(str, Enum):
     USER = "user"
     ADMIN = "admin"
 
@@ -29,3 +29,9 @@ class ReactionType(str, Enum):
     FIRE = "🔥"
     LAUGH = "😂"
     CLAP = "👏"
+
+
+class UserRegister(BaseModel):
+    name: str
+    password: str
+    role: Role

@@ -1,14 +1,17 @@
 import sqlite3
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException , Depends
 from database import get_db_connection
 from models import FriendRequestAction
+from utils import get_current_user
 
 
 router = APIRouter()
 
 
 @router.post("/send-friend-request")
-def send_friend_request(sender_id: int, receiver_id: int):
+def send_friend_request (receiver_id: int, current_user: dict = Depends(get_current_user)):
+    sender_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -30,7 +33,9 @@ def send_friend_request(sender_id: int, receiver_id: int):
 
 
 @router.post("/respond-friend-request")
-def respond_friend_request(user_id: int, sender_id: int, action: FriendRequestAction):
+def respond_friend_request(sender_id: int, action: FriendRequestAction, current_user: dict = Depends(get_current_user) ):
+    my_id = current_user["id"]
+    
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -41,7 +46,7 @@ def respond_friend_request(user_id: int, sender_id: int, action: FriendRequestAc
             SET status = 'accepted' 
             WHERE user_id = ? AND friend_id = ? AND status = 'pending'
         """,
-            (sender_id, user_id),
+            (sender_id, my_id),
         )
 
         if cursor.rowcount == 0:
@@ -58,7 +63,7 @@ def respond_friend_request(user_id: int, sender_id: int, action: FriendRequestAc
             DELETE FROM friends 
             WHERE user_id = ? AND friend_id = ? AND status = 'pending'
         """,
-            (sender_id, user_id),
+            (sender_id, my_id),
         )
 
         if cursor.rowcount == 0:
@@ -75,7 +80,9 @@ def respond_friend_request(user_id: int, sender_id: int, action: FriendRequestAc
 
 
 @router.get("/get-my-friends/{user_id}")
-def get_my_friends(user_id: int):
+def get_my_friends(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -97,7 +104,9 @@ def get_my_friends(user_id: int):
 
 
 @router.delete("/remove-friend")
-def remove_friend(my_id: int, friend_id: int):
+def remove_friend(friend_id: int, current_user: dict = Depends(get_current_user)):
+    my_id = current_user["id"]
+    
     conn = get_db_connection()
     cursor = conn.cursor()
 

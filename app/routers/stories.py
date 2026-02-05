@@ -3,35 +3,22 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from database import get_db_connection
 from models import Visibility, Role, ReactionType
+from utils import get_current_user, get_optional_user
 
 router = APIRouter()
 
 
 @router.post("/create-story")
 def create_story(
-    uploader_id: int,
     content: str,
     visibility: Visibility,
     group_id: Optional[int] = None,
+    current_user: dict = Depends(get_current_user),
 ):
+    uploader_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT role FROM users WHERE id = ?",
-        (uploader_id,),
-    )
-    user_row = cursor.fetchone()
-
-    if not user_row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user_role = dict(user_row)["role"]
-
-    if user_role == Role.GUEST.value:
-        conn.close()
-        raise HTTPException(status_code=403, detail="Guests cannot upload stories")
 
     if visibility == Visibility.GROUP and group_id is None:
         conn.close()
@@ -64,7 +51,11 @@ def create_story(
 
 
 @router.post("/react-to-story")
-def react_to_story(story_id: int, user_id: int, emoji: ReactionType):
+def react_to_story(
+    story_id: int, emoji: ReactionType, current_user: dict = Depends(get_current_user)
+):
+    user_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -94,33 +85,23 @@ def react_to_story(story_id: int, user_id: int, emoji: ReactionType):
 
 
 @router.delete("/delete-story")
-def delete_story(story_id: int, user_id: int):
+def delete_story(story_id: int, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    user_role = current_user["role"]
+
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT uploader_id FROM stories WHERE id = ?",
-        (story_id,),
-    )
+    cursor.execute("SELECT uploader_id FROM stories WHERE id = ?", (story_id,))
     story = cursor.fetchone()
 
     if not story:
         conn.close()
         raise HTTPException(status_code=404, detail="Story not found")
 
-    cursor.execute(
-        "SELECT role FROM users WHERE id = ?",
-        (user_id,),
-    )
-    user = cursor.fetchone()
-
-    if not user:
-        conn.close()
-        raise HTTPException(status_code=404, detail="User not found")
-
     is_owner = dict(story)["uploader_id"] == user_id
-    is_admin = dict(user)["role"] == Role.ADMIN.value
+    is_admin = user_role == "admin"
 
     if not is_owner and not is_admin:
         conn.close()
@@ -139,10 +120,15 @@ def delete_story(story_id: int, user_id: int):
 
 
 @router.get("/get-stories")
-def get_stories(viewer_id: int):
+def get_stories(current_user: Optional[dict] = Depends(get_optional_user)):
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+
+    if current_user:
+        viewer_id = current_user["id"]
+    else:
+        viewer_id = None
 
     query = """
     SELECT

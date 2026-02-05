@@ -2,37 +2,25 @@ import sqlite3
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Query
 from database import get_db_connection
-from models import PostType, Visibility, Role
+from models import PostType, Visibility
+from utils import get_current_user, get_optional_user
 
 router = APIRouter()
 
 
 @router.post("/create-post")
 def create_post(
-    user_id: int,
     post_type: PostType,
     content: str,
     visibility: Visibility,
     group_id: Optional[int] = None,
     tags: list[str] = Query(default=[]),
+    current_user: dict = Depends(get_current_user),
 ):
+    user_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    # validation to prevent guests from posting
-    cursor.execute(
-        """
-        SELECT role FROM users WHERE id = ? 
-    """,
-        (user_id,),
-    )
-    user_role_row = cursor.fetchone()
-    user_role = dict(user_role_row)["role"]
-    print(user_role)
-
-    if user_role == "guest":
-        conn.close()
-        raise HTTPException(status_code=422, detail="Guests are not allowed to post!")
 
     # validation to prevent the visibility when it is a group post
     if visibility == Visibility.GROUP and group_id is None:
@@ -40,11 +28,6 @@ def create_post(
         raise HTTPException(
             status_code=422, detail="Group ID is required for group visibility"
         )
-
-    # validation that the user exists
-    if not user_id:
-        conn.close()
-        raise HTTPException(status_code=404, detail="User not found")
 
     # adding a post
     cursor.execute(
@@ -93,7 +76,11 @@ def create_post(
 
 
 @router.delete("/delete-post")
-def delete_post(user_id: int, post_id: int):
+def delete_post(post_id: int, current_user: dict = Depends(get_current_user)):
+
+    user_id = current_user["id"]
+    user_role = current_user["role"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -110,29 +97,18 @@ def delete_post(user_id: int, post_id: int):
         conn.close()
         raise HTTPException(status_code=404, detail="Post not found")
 
-    # validate that the user own the post
     post_user_id = dict(post_row)["user_id"]
-    cursor.execute(
-        """
-                   SELECT role FROM users WHERE id = ?
-    """,
-        (user_id,),
-    )
-    user_row = cursor.fetchone()
-
-    if not user_row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user_role = dict(user_row)["role"]
 
     if user_id != post_user_id and user_role != "admin":
         conn.close()
         raise HTTPException(
             status_code=403, detail="You are not allowed to delete this post"
         )
-
-    cursor.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+    cursor.execute(
+        """
+                   DELETE FROM posts WHERE id = ?""",
+        (post_id,),
+    )
     conn.commit()
     conn.close()
 
@@ -140,23 +116,16 @@ def delete_post(user_id: int, post_id: int):
 
 
 @router.get("/get-post/{post_id}")
-def get_post(post_id: int, viewer_id: int):
+def get_post(post_id: int, current_user: Optional[dict] = Depends(get_optional_user)):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
-        SELECT role FROM users WHERE id = ?
-    """,
-        (viewer_id,),
-    )
-    viewer_row = cursor.fetchone()
-
-    if not viewer_row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Viewer user not found")
-
-    viewer_role = dict(viewer_row)["role"]
+    if current_user:
+        viewer_id = current_user["id"]
+        viewer_role = current_user["role"]
+    else:
+        viewer_id = None
+        viewer_role = "guest"
 
     cursor.execute(
         """
@@ -188,22 +157,22 @@ def get_post(post_id: int, viewer_id: int):
                 status_code=403, detail="Guests cannot view friends-only posts"
             )
 
-    # validate if they are friends
-    cursor.execute(
-        """
-                SELECT 1 FROM friends 
-                WHERE ((user_id = ? AND friend_id = ?) 
-                OR (user_id = ? AND friend_id = ?))
-                AND status = 'accepted'
-            """,
-        (author_id, viewer_id, viewer_id, author_id),
-    )
-
-    if not cursor.fetchone():
-        conn.close()
-        raise HTTPException(
-            status_code=403, detail="You must be a friend to view this post"
+        # validate if they are friends
+        cursor.execute(
+            """
+                        SELECT 1 FROM friends 
+                        WHERE ((user_id = ? AND friend_id = ?) 
+                        OR (user_id = ? AND friend_id = ?))
+                        AND status = 'accepted'
+                    """,
+            (author_id, viewer_id, viewer_id, author_id),
         )
+
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(
+                status_code=403, detail="You must be a friend to view this post"
+            )
     # validate if it is a group
     elif visibility == "group":
 
@@ -219,7 +188,7 @@ def get_post(post_id: int, viewer_id: int):
                 status_code=500, detail="Invalid post data: Missing group ID"
             )
 
-        # validate that the vewer is a part of the group
+        # validate that the viewer is a part of the group
         cursor.execute(
             """
             SELECT 1 FROM groups_users 
@@ -235,14 +204,14 @@ def get_post(post_id: int, viewer_id: int):
                 detail="You must be a member of the group to view this post",
             )
 
-        cursor.execute(
-            """
+    cursor.execute(
+        """
             SELECT t.content FROM tags t 
             JOIN posts_tags pt ON t.id = pt.tags_id 
             WHERE pt.post_id = ?
         """,
-            (post_id,),
-        )
+        (post_id,),
+    )
 
     tags_rows = cursor.fetchall()
     tags_list = [dict(row)["content"] for row in tags_rows]
@@ -254,8 +223,13 @@ def get_post(post_id: int, viewer_id: int):
 
 @router.put("/update-post/{post_id}")
 def update_post(
-    post_id: int, user_id: int, content: str = None, visibility: Visibility = None
+    post_id: int,
+    content: str = None,
+    visibility: Visibility = None,
+    current_user: dict = Depends(get_current_user),
 ):
+    user_id = current_user["id"]
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
