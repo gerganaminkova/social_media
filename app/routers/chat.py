@@ -7,9 +7,11 @@ router = APIRouter()
 
 
 @router.post("/send-message")
-def send_message(receiver_id: int, content: str ,current_user: dict = Depends(get_current_user)):
+def send_message(
+    receiver_id: int, content: str, current_user: dict = Depends(get_current_user)
+):
     sender_id = current_user["id"]
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -47,12 +49,12 @@ def send_message(receiver_id: int, content: str ,current_user: dict = Depends(ge
     conn.commit()
     conn.close()
 
-    return {"message:" "Message sent successfully"}
+    return {"message": "Message sent successfully"}
 
 
 @router.get("/get-chat")
 def get_chat(other_user_id: int, current_user: dict = Depends(get_current_user)):
-    user1_id = current_user["id"] 
+    user1_id = current_user["id"]
     user2_id = other_user_id
 
     conn = get_db_connection()

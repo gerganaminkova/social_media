@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-jose[cryptography]
+python-multipart
+pytest
+pytest-cov
+httpx
+mypy
+pylint

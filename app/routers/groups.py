@@ -7,7 +7,12 @@ router = APIRouter()
 
 
 @router.post("/create-group")
-def create_group(name: str, owner_id: int, member_ids: list[int],current_user: dict = Depends(get_current_user)):
+def create_group(
+    name: str,
+    owner_id: int,
+    member_ids: list[int],
+    current_user: dict = Depends(get_current_user),
+):
     owner_id = current_user["id"]
 
     conn = get_db_connection()
@@ -36,7 +41,9 @@ def create_group(name: str, owner_id: int, member_ids: list[int],current_user: d
 
 
 @router.delete("/remove-group-member")
-def remove_group_member(group_id: int, user_id: int, current_user: dict = Depends(get_current_user) ):
+def remove_group_member(
+    group_id: int, user_id: int, current_user: dict = Depends(get_current_user)
+):
     owner_id = current_user["id"]
 
     conn = get_db_connection()
@@ -81,7 +88,7 @@ def remove_group_member(group_id: int, user_id: int, current_user: dict = Depend
 
 
 @router.delete("/delete-group")
-def delete_group(group_id: int, current_user: dict = Depends(get_current_user) ):
+def delete_group(group_id: int, current_user: dict = Depends(get_current_user)):
     owner_id = current_user["id"]
 
     conn = get_db_connection()
@@ -119,7 +126,9 @@ def delete_group(group_id: int, current_user: dict = Depends(get_current_user) )
 
 
 @router.post("/add-member")
-def add_member_to_group(group_id: int, new_member_id: int, current_user: dict = Depends(get_current_user)):
+def add_member_to_group(
+    group_id: int, new_member_id: int, current_user: dict = Depends(get_current_user)
+):
     admin_id = current_user["id"]
 
     conn = get_db_connection()

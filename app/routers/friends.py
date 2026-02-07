@@ -1,5 +1,5 @@
 import sqlite3
-from fastapi import APIRouter, HTTPException , Depends
+from fastapi import APIRouter, HTTPException, Depends
 from database import get_db_connection
 from models import FriendRequestAction
 from utils import get_current_user
@@ -9,7 +9,9 @@ router = APIRouter()
 
 
 @router.post("/send-friend-request")
-def send_friend_request (receiver_id: int, current_user: dict = Depends(get_current_user)):
+def send_friend_request(
+    receiver_id: int, current_user: dict = Depends(get_current_user)
+):
     sender_id = current_user["id"]
 
     conn = get_db_connection()
@@ -33,9 +35,13 @@ def send_friend_request (receiver_id: int, current_user: dict = Depends(get_curr
 
 
 @router.post("/respond-friend-request")
-def respond_friend_request(sender_id: int, action: FriendRequestAction, current_user: dict = Depends(get_current_user) ):
+def respond_friend_request(
+    sender_id: int,
+    action: FriendRequestAction,
+    current_user: dict = Depends(get_current_user),
+):
     my_id = current_user["id"]
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -106,7 +112,7 @@ def get_my_friends(current_user: dict = Depends(get_current_user)):
 @router.delete("/remove-friend")
 def remove_friend(friend_id: int, current_user: dict = Depends(get_current_user)):
     my_id = current_user["id"]
-    
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
